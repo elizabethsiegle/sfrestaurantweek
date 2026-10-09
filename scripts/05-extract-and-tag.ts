@@ -21,14 +21,26 @@ const menus: Record<string, { menuId: string; text: string }> = JSON.parse(
   readFileSync('data/02-menus.json', 'utf8'),
 )
 
+// An API key that is not bound to one workspace must name the workspace on
+// every request, or the API rejects it. A key that is bound must not send the
+// header at all, so it is omitted when the variable is unset.
+export function anthropicHeaders(apiKey: string, workspaceId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  }
+  if (workspaceId) headers['anthropic-workspace-id'] = workspaceId
+  return headers
+}
+
 async function requestTagging(menuText: string): Promise<unknown> {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: anthropicHeaders(
+      process.env.ANTHROPIC_API_KEY!,
+      process.env.ANTHROPIC_WORKSPACE_ID,
+    ),
     body: JSON.stringify({
       model: TAGGING_MODEL,
       max_tokens: 2000,

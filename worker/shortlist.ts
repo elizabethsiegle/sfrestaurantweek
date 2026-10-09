@@ -78,3 +78,16 @@ export async function overDailyLimit(kv: KVNamespace, ip: string): Promise<boole
   await kv.put(key, String(used + 1), { expirationTtl: 60 * 60 * 25 })
   return false
 }
+
+// An API key that is not bound to one workspace must name the workspace on
+// every request, or the API rejects it. A key that is bound must not send the
+// header at all, so it is omitted when the binding is unset.
+export function anthropicHeaders(apiKey: string, workspaceId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  }
+  if (workspaceId) headers['anthropic-workspace-id'] = workspaceId
+  return headers
+}

@@ -1,7 +1,7 @@
 import { env, SELF } from 'cloudflare:test'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import worker from '../../worker/index.js'
-import {
+import { anthropicHeaders,
   buildCatalog,
   DAILY_LIMIT,
   MAX_PICKS,
@@ -273,5 +273,23 @@ describe('POST /api/shortlist with a stubbed upstream', () => {
     const res = await ask('with-key-ip')
     expect(res.status).toBe(200)
     expect(await env.KV.get(`rate:with-key-ip:${today()}`)).toBe('1')
+  })
+})
+
+describe('anthropicHeaders', () => {
+  it('omits the workspace header when no workspace is configured', () => {
+    const headers = anthropicHeaders('test-key')
+    expect(headers['x-api-key']).toBe('test-key')
+    expect(headers['anthropic-version']).toBe('2023-06-01')
+    expect('anthropic-workspace-id' in headers).toBe(false)
+  })
+
+  it('names the workspace when one is configured', () => {
+    const headers = anthropicHeaders('test-key', 'wrkspc_abc123')
+    expect(headers['anthropic-workspace-id']).toBe('wrkspc_abc123')
+  })
+
+  it('omits the header for an empty workspace id rather than sending a blank one', () => {
+    expect('anthropic-workspace-id' in anthropicHeaders('test-key', '')).toBe(false)
   })
 })

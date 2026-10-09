@@ -1,6 +1,7 @@
 import indexData from '../public/data/index.json' with { type: 'json' }
 import type { Entry } from '../src/lib/entry.js'
 import {
+  anthropicHeaders,
   buildCatalog,
   overDailyLimit,
   SHORTLIST_SYSTEM_PROMPT,
@@ -12,6 +13,7 @@ export interface Env {
   ASSETS: Fetcher
   KV: KVNamespace
   ANTHROPIC_API_KEY: string
+  ANTHROPIC_WORKSPACE_ID?: string
 }
 
 const ENTRIES = indexData as unknown as Entry[]
@@ -54,11 +56,7 @@ async function shortlist(request: Request, env: Env): Promise<Response> {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
+      headers: anthropicHeaders(env.ANTHROPIC_API_KEY, env.ANTHROPIC_WORKSPACE_ID),
       body: JSON.stringify({
         model: 'claude-sonnet-5-5',
         max_tokens: 1000,

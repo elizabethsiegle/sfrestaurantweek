@@ -78,6 +78,19 @@ The Worker cannot read `.env`, so it needs its own copy of the Anthropic key:
 npx wrangler secret put ANTHROPIC_API_KEY
 ```
 
+If a request fails with "This API key is not scoped to a workspace", the key
+belongs to an organisation rather than to one workspace, so every request must
+name the workspace. Set `ANTHROPIC_WORKSPACE_ID` in `.env` for the build
+scripts, and give the Worker its own copy:
+
+```bash
+npx wrangler secret put ANTHROPIC_WORKSPACE_ID
+```
+
+The id starts with `wrkspc_` and appears in the Anthropic console URL while the
+workspace is open. Leave it unset for a key that is already bound to a
+workspace, because sending the header then is itself an error.
+
 `VITE_PROTOMAPS_API_KEY` is optional. Without it the map draws pins on a plain
 background.
 
