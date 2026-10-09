@@ -1,0 +1,22 @@
+:root {
+  --paper: #fdfaf2;
+  --paper-shade: #f4efe4;
+  --ink: #171310;
+  --ink-soft: #5a5149;
+  --rule: #d8cfbd;
+  --letterpress-red: #b3202c;
+
+  --font-display: 'Playfair Display', 'Hoefler Text', Georgia, serif;
+  --font-text: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  --size-xs: 0.75rem;
+  --size-s: 0.875rem;
+  --size-m: 1rem;
+  --size-l: 1.5rem;
+  --size-xl: 2.5rem;
+  --size-display: 4rem;
+
+  --gutter: 1rem;
+  --row-pad: 0.6rem;
+  --card-pad: 2.25rem;
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+# Anchored to the project root on purpose. A bare `data/` would also match
+# public/data, and git cannot re-include a path whose parent directory is
+# excluded, so the shipped index would silently never be committed.
+/data/
+.env
+.wrangler/
+test-results/
+playwright-report/

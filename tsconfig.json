@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals"],
+    "skipLibCheck": true
+  },
+  "include": ["src", "scripts", "test", "e2e", "*.config.ts"],
+  "exclude": ["worker", "test/worker", "node_modules", "dist"]
+}

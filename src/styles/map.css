@@ -1,0 +1,58 @@
+.board__toggle {
+  display: inline-flex;
+  border: 1px solid var(--ink);
+}
+
+.board__toggle button {
+  font: inherit;
+  padding: 0.4rem 1.1rem;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.board__toggle button + button {
+  border-left: 1px solid var(--ink);
+}
+
+.board__toggle button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.board__toggle button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.map-frame {
+  position: relative;
+  margin-top: 0.75rem;
+}
+
+.map {
+  height: 28rem;
+  background: var(--paper-shade);
+  border: 1px solid var(--ink);
+}
+
+.map-frame__empty {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  max-width: 22rem;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border: 1px dashed var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.map-frame__loading {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--ink);
+  font-size: 0.9rem;
+}
