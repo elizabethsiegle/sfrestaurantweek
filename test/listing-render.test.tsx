@@ -81,10 +81,53 @@ describe('Listing', () => {
   })
 
   it('surfaces a personal review when there is one', () => {
-    entries.value = [make({ personal: { rating: 4, yelpUrl: null, excerpt: 'One of my favorites.', visitDate: '2018-11-19T03:17:48+00:00' } })]
+    entries.value = [make({ personal: { rating: 4, yelpUrl: null, excerpt: 'One of my favorites.', text: 'One of my favorites.', visitDate: '2018-11-19T03:17:48+00:00', photos: [] } })]
     render(<Listing />)
     expect(screen.getByText(/one of my favorites/i)).toBeTruthy()
     expect(screen.getByText(/2018/)).toBeTruthy()
+  })
+
+  it('hides the long tail of a review behind the dots until they are used', async () => {
+    const personal = {
+      rating: 5, yelpUrl: null,
+      excerpt: 'The tea leaf salad is the reason to come\u2026',
+      text: 'The tea leaf salad is the reason to come, and the chili lamb is the reason to come back.',
+      visitDate: '2018-11-19T03:17:48+00:00', photos: [],
+    }
+    entries.value = [make({ personal })]
+    render(<Listing />)
+    expect(screen.queryByText(/reason to come back/)).toBeNull()
+
+    const open = screen.getByRole('button', { name: /read my whole review/i })
+    expect(open.getAttribute('aria-expanded')).toBe('false')
+    open.click()
+    await waitFor(() => expect(screen.getByText(/reason to come back/)).toBeTruthy())
+    expect(screen.getByRole('button', { name: /shorten my review/i })).toBeTruthy()
+  })
+
+  it('offers no dots when the review is short and carries no photos', () => {
+    const text = 'Short and complete.'
+    entries.value = [make({ personal: { rating: 4, yelpUrl: null, excerpt: text, text, visitDate: '2018-11-19T03:17:48+00:00', photos: [] } })]
+    render(<Listing />)
+    expect(screen.queryByRole('button', { name: /read my whole review/i })).toBeNull()
+  })
+
+  it('reveals the photos from the review once expanded, captioned', async () => {
+    const text = 'Short and complete.'
+    entries.value = [make({
+      personal: {
+        rating: 4, yelpUrl: null, excerpt: text, text, visitDate: '2018-11-19T03:17:48+00:00',
+        photos: [{ src: '/data/photos/x/a.jpg', caption: 'Chili Lamb' }, { src: '/data/photos/x/b.jpg', caption: '' }],
+      },
+    })]
+    const { container } = render(<Listing />)
+    expect(container.querySelectorAll('.row__photos img').length).toBe(0)
+
+    screen.getByRole('button', { name: /read my whole review/i }).click()
+    await waitFor(() => expect(container.querySelectorAll('.row__photos img').length).toBe(2))
+    expect(screen.getByAltText('Chili Lamb')).toBeTruthy()
+    // An uncaptioned photo still needs an accessible name.
+    expect(screen.getByAltText(/my photo of/i)).toBeTruthy()
   })
 
   it('renders no quote block when there is no personal review', () => {
@@ -148,7 +191,7 @@ describe('Listing', () => {
   it('uses singular course and star for one', () => {
     entries.value = [make({
       offers: [{ meal: 'Lunch', price: 20, courses: 1, dealDelta: 0, medianCourses: 3 }],
-      personal: { rating: 1, yelpUrl: null, excerpt: 'Meh.', visitDate: '2019-05-01T12:00:00+00:00' },
+      personal: { rating: 1, yelpUrl: null, excerpt: 'Meh.', text: 'Meh.', visitDate: '2019-05-01T12:00:00+00:00', photos: [] },
     })]
     render(<Listing />)
     expect(screen.getByText(/1 course at \$20\./)).toBeTruthy()
@@ -168,7 +211,7 @@ describe('Listing', () => {
       openTableUrl: 'https://example.com/book', websiteUrl: 'https://example.com',
       offers: [{ meal: 'Dinner', price: 75, courses: 4, dealDelta: 1, medianCourses: 3 }],
       moods: [{ tag: 'date-night', evidence: 'shared plates' }, { tag: 'celebration', evidence: 'tasting menu' }],
-      personal: { rating: 4, yelpUrl: null, excerpt: 'Worth it.', visitDate: '2018-11-19T03:17:48+00:00' },
+      personal: { rating: 4, yelpUrl: null, excerpt: 'Worth it.', text: 'Worth it.', visitDate: '2018-11-19T03:17:48+00:00', photos: [] },
     })]
     origin.value = { lat: 37.7749, lng: -122.4194 }
     shortlistReasons.value = new Map([['x', 'Fits a date night']])
@@ -322,15 +365,33 @@ describe('DetailCard', () => {
     return { promise, resolve }
   }
 
-  it('says the menu could not be loaded when the file is missing, and does not cache the failure', async () => {
+  it('says the menu is not published when the file is missing, and does not cache that', async () => {
     const fetchMock = vi.fn(async () => ({ ok: false, status: 404, json: async () => { throw new Error('not json') } }))
     vi.stubGlobal('fetch', fetchMock)
     render(<DetailCard />)
     await openDetail('ghost', 'Ghost Kitchen')
-    await waitFor(() => expect(screen.getByText(/could not load this menu/i)).toBeTruthy())
-    expect(screen.queryByText(/menu not available yet/i)).toBeNull()
+    // A missing file means no menu was published, which is not a failure the
+    // visitor can clear by retrying.
+    await waitFor(() => expect(screen.getByText(/menu not available yet/i)).toBeTruthy())
+    expect(screen.queryByText(/could not load this menu/i)).toBeNull()
     await openDetail('ghost', 'Ghost Kitchen')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('still reports a real transport failure as one', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })))
+    render(<DetailCard />)
+    await openDetail('broken', 'Broken Kitchen')
+    await waitFor(() => expect(screen.getByText(/could not load this menu/i)).toBeTruthy())
+  })
+
+  it('skips the request entirely when the restaurant published no menu', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<DetailCard />)
+    await openDetail('no-menu', 'Astra', null, false)
+    await waitFor(() => expect(screen.getByText(/menu not available yet/i)).toBeTruthy())
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('treats a body with no courses list as a failed load', async () => {

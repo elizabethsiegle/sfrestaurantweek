@@ -28,6 +28,11 @@ export interface EntryOffer {
   medianCourses: number | null
 }
 
+export interface EntryPhoto {
+  src: string
+  caption: string
+}
+
 export interface Entry extends Omit<Restaurant, 'offers' | 'menuId'> {
   offers: EntryOffer[]
   menuCoverage: 'full' | 'none'
@@ -37,7 +42,14 @@ export interface Entry extends Omit<Restaurant, 'offers' | 'menuId'> {
   lat: number | null
   lng: number | null
   address: string | null
-  personal: { rating: number | null; yelpUrl: string | null; excerpt: string; visitDate: string } | null
+  personal: {
+    rating: number | null
+    yelpUrl: string | null
+    excerpt: string
+    text: string
+    visitDate: string
+    photos: EntryPhoto[]
+  } | null
 }
 
 export interface Meta {

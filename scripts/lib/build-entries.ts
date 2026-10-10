@@ -50,6 +50,17 @@ export function courseCount(
   return forMeal > 0 ? forMeal : null
 }
 
+const EXCERPT_LIMIT = 280
+
+// Cut on a word boundary and mark the cut, so a published quote never ends mid-word.
+function excerptOf(text: string): string {
+  const trimmed = text.trim()
+  if (trimmed.length <= EXCERPT_LIMIT) return trimmed
+  const cut = trimmed.slice(0, EXCERPT_LIMIT)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s,;:.!?-]+$/, '')}\u2026`
+}
+
 export function buildEntries({ restaurants, places, personal, tagged }: BuildInputs): BuildResult {
   const taggingFor = (r: Restaurant) => (r.menuId ? tagged[r.menuId] : undefined)
 
@@ -105,8 +116,10 @@ export function buildEntries({ restaurants, places, personal, tagged }: BuildInp
         ? {
             rating: mine?.rating ?? null,
             yelpUrl: mine?.yelpUrl ?? null,
-            excerpt: firstVisit.text.slice(0, 280),
+            excerpt: excerptOf(firstVisit.text),
+            text: firstVisit.text.trim(),
             visitDate: firstVisit.date,
+            photos: mine?.photos ?? [],
           }
         : null,
     }

@@ -21,6 +21,63 @@ export interface MenuTagging {
   blurb: string
 }
 
+const DISH_SCHEMA = {
+  type: 'object',
+  properties: { name: { type: 'string' }, description: { type: 'string' } },
+  required: ['name', 'description'],
+  additionalProperties: false,
+} as const
+
+const CLAIM_SCHEMA = {
+  type: 'object',
+  properties: { value: { type: 'boolean' }, evidence: { type: 'string' } },
+  required: ['value', 'evidence'],
+  additionalProperties: false,
+} as const
+
+// Sent as output_config.format so the model cannot return prose, a code fence or
+// a half-written object. validateTagging still runs: the schema constrains shape,
+// not whether a mood tag is actually supported by the menu.
+export const TAGGING_SCHEMA = {
+  type: 'object',
+  properties: {
+    courses: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          meal: { anyOf: [{ type: 'string', enum: [...MEALS] }, { type: 'null' }] },
+          dishes: { type: 'array', items: DISH_SCHEMA },
+        },
+        required: ['name', 'meal', 'dishes'],
+        additionalProperties: false,
+      },
+    },
+    moods: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { tag: { type: 'string', enum: [...MOOD_TAGS] }, evidence: { type: 'string' } },
+        required: ['tag', 'evidence'],
+        additionalProperties: false,
+      },
+    },
+    dietary: {
+      type: 'object',
+      properties: {
+        vegetarianFriendly: CLAIM_SCHEMA,
+        veganFriendly: CLAIM_SCHEMA,
+        glutenFreeFriendly: CLAIM_SCHEMA,
+      },
+      additionalProperties: false,
+    },
+    blurb: { type: 'string' },
+  },
+  required: ['courses', 'moods', 'dietary', 'blurb'],
+  additionalProperties: false,
+} as const
+
 const KNOWN_MOODS: ReadonlySet<string> = new Set<string>(MOOD_TAGS)
 const KNOWN_DIETARY: ReadonlySet<string> = new Set<string>(DIETARY_KEYS)
 const KNOWN_MEALS: ReadonlySet<string> = new Set<string>(MEALS)
@@ -69,8 +126,11 @@ export function taggingCacheKey(
   menuText: string,
   model: string = TAGGING_MODEL,
   prompt: string = TAGGING_SYSTEM_PROMPT,
+  schema: unknown = TAGGING_SCHEMA,
 ): string {
-  return createHash('sha256').update(JSON.stringify([model, prompt, menuText])).digest('hex')
+  return createHash('sha256')
+    .update(JSON.stringify([model, prompt, schema, menuText]))
+    .digest('hex')
 }
 
 function normalizeForMatch(text: string): string {

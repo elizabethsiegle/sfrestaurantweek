@@ -126,6 +126,40 @@ describe('applyFilters', () => {
     expect(applyFilters(list, { ...EMPTY_FILTERS, maxPrice: 45 }).map((e) => e.slug)).toEqual(['cheap-lunch-only'])
   })
 
+  it('matches a price tier exactly, so a cheaper menu is not listed under a dearer band', () => {
+    const list = [
+      make({
+        slug: 'lunch-45-dinner-60',
+        offers: [
+          { meal: 'Lunch', price: 45, courses: null, dealDelta: null, medianCourses: null },
+          { meal: 'Dinner', price: 60, courses: null, dealDelta: null, medianCourses: null },
+        ],
+      }),
+      make({
+        slug: 'dinner-90',
+        offers: [{ meal: 'Dinner', price: 90, courses: null, dealDelta: null, medianCourses: null }],
+      }),
+    ]
+    expect(applyFilters(list, { ...EMPTY_FILTERS, priceTier: 90 }).map((e) => e.slug)).toEqual(['dinner-90'])
+    expect(applyFilters(list, { ...EMPTY_FILTERS, priceTier: 60 }).map((e) => e.slug)).toEqual([
+      'lunch-45-dinner-60',
+    ])
+  })
+
+  it('reads a tier against the chosen meal only', () => {
+    const list = [
+      make({
+        slug: 'lunch-45-dinner-90',
+        offers: [
+          { meal: 'Lunch', price: 45, courses: null, dealDelta: null, medianCourses: null },
+          { meal: 'Dinner', price: 90, courses: null, dealDelta: null, medianCourses: null },
+        ],
+      }),
+    ]
+    expect(applyFilters(list, { ...EMPTY_FILTERS, meals: ['Lunch'], priceTier: 90 })).toEqual([])
+    expect(applyFilters(list, { ...EMPTY_FILTERS, meals: ['Dinner'], priceTier: 90 })).toHaveLength(1)
+  })
+
   it('keeps a restaurant whose only offer at the chosen meal is inside the cap', () => {
     const list = [
       make({ slug: 'brunch-only', offers: [{ meal: 'Brunch', price: 30, courses: null, dealDelta: null, medianCourses: null }] }),

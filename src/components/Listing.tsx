@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks'
 import { entries, filters, origin, shortlistReasons, visible } from '../state/board.js'
 import { EMPTY_FILTERS } from '../lib/filter.js'
 import { distanceMeters, walkMinutes } from '../lib/geo.js'
@@ -47,6 +48,43 @@ function OfferLine({ offer }: { offer: EntryOffer }) {
   )
 }
 
+function Review({ personal, name }: { personal: NonNullable<Entry['personal']>; name: string }) {
+  const [open, setOpen] = useState(false)
+  const trimmed = personal.excerpt !== personal.text
+  const canOpen = trimmed || personal.photos.length > 0
+
+  return (
+    <blockquote class="row__personal">
+      <p>{open || !trimmed ? personal.text : personal.excerpt}</p>
+      {canOpen && (
+        <button
+          type="button"
+          class="row__more"
+          aria-expanded={open}
+          aria-label={open ? `Shorten my review of ${name}` : `Read my whole review of ${name}`}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? 'Show less' : '\u2022\u2022\u2022'}
+        </button>
+      )}
+      {open && personal.photos.length > 0 && (
+        <ul class="row__photos">
+          {personal.photos.map((photo) => (
+            <li key={photo.src}>
+              <img src={photo.src} alt={photo.caption || `My photo of ${name}`} loading="lazy" />
+              {photo.caption && <span>{photo.caption}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <footer>
+        Lizzie, {new Date(personal.visitDate).getUTCFullYear()}
+        {personal.rating !== null && ` \u00b7 ${plural(personal.rating, 'star', 'stars')}`}
+      </footer>
+    </blockquote>
+  )
+}
+
 function Row({ entry, noMenusAnywhere }: { entry: Entry; noMenusAnywhere: boolean }) {
   const reason = shortlistReasons.value.get(entry.slug)
   const walk =
@@ -86,15 +124,7 @@ function Row({ entry, noMenusAnywhere }: { entry: Entry; noMenusAnywhere: boolea
         </ul>
       )}
 
-      {entry.personal && (
-        <blockquote class="row__personal">
-          <p>{entry.personal.excerpt}</p>
-          <footer>
-            Lizzie, {new Date(entry.personal.visitDate).getUTCFullYear()}
-            {entry.personal.rating !== null && ` · ${plural(entry.personal.rating, 'star', 'stars')}`}
-          </footer>
-        </blockquote>
-      )}
+      {entry.personal && <Review personal={entry.personal} name={entry.name} />}
 
       {(entry.menuCoverage === 'full' || entry.openTableUrl || entry.websiteUrl) && (
         <p class="row__links">

@@ -35,7 +35,7 @@ export function MapView() {
         : {
             version: 8,
             sources: {},
-            layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#f4efe4' } }],
+            layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e9e7e0' } }],
           },
       center: [-122.4194, 37.7749],
       zoom: 12,
@@ -50,16 +50,19 @@ export function MapView() {
         source: SOURCE,
         paint: {
           'circle-radius': 6,
-          'circle-color': '#b3202c',
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fdfaf2',
+          'circle-color': '#10261f',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#e3b23c',
         },
       })
       instance.on('click', 'pins', (e) => {
-        const props = e.features?.[0]?.properties
-        if (typeof props?.slug === 'string' && typeof props.name === 'string') {
-          void openDetail(props.slug, props.name)
-        }
+        const slug = e.features?.[0]?.properties?.slug
+        if (typeof slug !== 'string') return
+        // The list only offers a menu when one was published. A pin must say the
+        // same thing rather than report a load failure the visitor cannot clear.
+        const entry = entries.value.find((candidate) => candidate.slug === slug)
+        if (!entry) return
+        void openDetail(entry.slug, entry.name, null, entry.menuCoverage === 'full')
       })
     })
 

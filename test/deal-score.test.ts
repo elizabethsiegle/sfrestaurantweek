@@ -109,6 +109,7 @@ const personalFor = (verification: Verification) => ({
   yelpUrl: 'https://www.yelp.com/biz/x',
   verification,
   visits: [{ date: '2025-06-16T05:54:12+00:00', rating: 4, text: 'Great meal.' }],
+  photos: [],
 })
 
 const inputs = (overrides: Partial<BuildInputs> = {}): BuildInputs => ({

@@ -4,6 +4,7 @@ import { loadBoard, meta } from './state/board.js'
 import { eventStamp } from './lib/stamp.js'
 import { SearchBar } from './components/SearchBar.js'
 import { FilterChips } from './components/FilterChips.js'
+import { PriceBands } from './components/PriceBands.js'
 import { Listing } from './components/Listing.js'
 import { DetailCard } from './components/DetailCard.js'
 import { LoadFailure } from './components/LoadFailure.js'
@@ -20,15 +21,18 @@ function App() {
   return (
     <>
       <header class="masthead">
-        <h1>San Francisco Restaurant Week</h1>
-        {m && (
-          <p class="masthead__stamp">{eventStamp(m.eventStart, m.eventEnd)}</p>
-        )}
-        {m && (
-          <p class="masthead__counts">
-            {m.restaurants} restaurants · {m.withMenus} with published menus · {m.mapped} mapped
-          </p>
-        )}
+        <div class="masthead__head">
+          <h1>San Francisco Restaurant Week</h1>
+          {m && (
+            <div class="masthead__meta">
+              <p class="masthead__stamp">{eventStamp(m.eventStart, m.eventEnd)}</p>
+              <p class="masthead__counts">
+                <b>{m.restaurants}</b> restaurants, <b>{m.withMenus}</b> with a published menu
+              </p>
+            </div>
+          )}
+        </div>
+        <PriceBands />
       </header>
       <main>
         <SearchBar />

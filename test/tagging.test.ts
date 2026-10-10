@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { MOOD_TAGS } from '../src/lib/moods.js'
+import { MEALS } from '../src/lib/types.js'
 import {
+  TAGGING_SCHEMA,
   TAGGING_SYSTEM_PROMPT,
   evidenceAppearsIn,
   taggingCacheKey,
@@ -240,5 +242,32 @@ describe('taggingCacheKey', () => {
 
   it('changes when the prompt changes', () => {
     expect(taggingCacheKey(menuText)).not.toBe(taggingCacheKey(menuText, undefined, 'a new prompt'))
+  })
+})
+
+describe('TAGGING_SCHEMA', () => {
+  it('allows exactly the mood tags and meals the validator accepts', () => {
+    const moodTag = TAGGING_SCHEMA.properties.moods.items.properties.tag
+    expect([...moodTag.enum]).toEqual([...MOOD_TAGS])
+
+    const meal = TAGGING_SCHEMA.properties.courses.items.properties.meal
+    expect([...meal.anyOf[0].enum]).toEqual([...MEALS])
+    expect(meal.anyOf[1]).toEqual({ type: 'null' })
+  })
+
+  it('leaves every dietary key optional so unsupported claims can be omitted', () => {
+    const dietary = TAGGING_SCHEMA.properties.dietary
+    expect(dietary).not.toHaveProperty('required')
+    expect(Object.keys(dietary.properties)).toEqual([
+      'vegetarianFriendly',
+      'veganFriendly',
+      'glutenFreeFriendly',
+    ])
+  })
+
+  it('changes the cache key, so entries stored before it are re-requested', () => {
+    expect(taggingCacheKey(menuText)).not.toBe(
+      taggingCacheKey(menuText, undefined, undefined, { type: 'object' }),
+    )
   })
 })

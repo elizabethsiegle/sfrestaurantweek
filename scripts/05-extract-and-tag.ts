@@ -3,6 +3,7 @@ import { csvRow } from './lib/csv.js'
 import { MAX_ERROR_BODY, redact } from './lib/places.js'
 import {
   TAGGING_MODEL,
+  TAGGING_SCHEMA,
   TAGGING_SYSTEM_PROMPT,
   evidenceAppearsIn,
   taggingCacheKey,
@@ -13,6 +14,7 @@ import {
 const CACHE_DIR = 'data/cache/tagging'
 const MAX_ATTEMPTS = 2
 const MAX_MENU_CHARS = 20000
+const MAX_RESPONSE_TOKENS = 16000
 
 if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
 mkdirSync(CACHE_DIR, { recursive: true })
@@ -43,9 +45,13 @@ async function requestTagging(menuText: string): Promise<unknown> {
     ),
     body: JSON.stringify({
       model: TAGGING_MODEL,
-      max_tokens: 2000,
+      max_tokens: MAX_RESPONSE_TOKENS,
       system: TAGGING_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: menuText }],
+      // Reading a menu into a fixed schema needs no deliberation, and thinking
+      // tokens count against max_tokens. This model rejects `disabled`.
+      thinking: { type: 'between_tools' },
+      output_config: { format: { type: 'json_schema', schema: TAGGING_SCHEMA } },
     }),
   })
   if (!res.ok) {
@@ -53,8 +59,18 @@ async function requestTagging(menuText: string): Promise<unknown> {
     throw new Error(`anthropic ${res.status}: ${detail}`)
   }
 
-  const body = (await res.json()) as { content: Array<{ type: string; text?: string }> }
+  const body = (await res.json()) as {
+    stop_reason: string
+    content: Array<{ type: string; text?: string }>
+  }
+  if (body.stop_reason === 'max_tokens') {
+    throw new Error(`response hit max_tokens (${MAX_RESPONSE_TOKENS}); menu is too long to tag`)
+  }
+
   const text = body.content.find((block) => block.type === 'text')?.text ?? ''
+  // Structured output returns bare JSON, so this only matters if the model
+  // ever wraps it in prose. Safe now that max_tokens is rejected above: a
+  // truncated body can no longer slice down to a valid-looking partial object.
   return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
 }
 

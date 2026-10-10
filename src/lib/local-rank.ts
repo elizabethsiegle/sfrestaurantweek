@@ -180,19 +180,26 @@ export function localRank(entries: Entry[], query: string, limit: number): Pick[
 
   const scored = candidates.map((c) => {
     const reasons = new Map<string, number>()
+    let termsMatched = 0
     for (const term of tokens) {
-      for (const hit of textHits(c.entry, term)) reasons.set(hit.reason, (reasons.get(hit.reason) ?? 0) + hit.weight)
+      const hits = textHits(c.entry, term)
+      if (hits.length) termsMatched += 1
+      for (const hit of hits) reasons.set(hit.reason, (reasons.get(hit.reason) ?? 0) + hit.weight)
     }
     const score = [...reasons.values()].reduce((sum, w) => sum + w, 0)
-    return { ...c, reasons, score }
+    return { ...c, reasons, score, termsMatched }
   })
 
   const hasText = tokens.length > 0
   if (hasText && !scored.some((s) => s.score > 0)) return []
   const pool = hasText ? scored.filter((s) => s.score > 0) : scored
 
+  // Covering more of the query beats scoring higher on less of it: "mission
+  // italian" must put an Italian place in the Mission above an Italian place
+  // elsewhere that picks up the same total from its mood and blurb text.
   pool.sort(
     (a, b) =>
+      b.termsMatched - a.termsMatched ||
       b.score - a.score ||
       (hasConstraint ? (a.price ?? Infinity) - (b.price ?? Infinity) : 0) ||
       a.entry.name.localeCompare(b.entry.name),

@@ -31,11 +31,11 @@ test('lists every participating restaurant on load', async ({ page }) => {
   await expect(page.locator('.row')).toHaveCount(174)
 })
 
-test('hides the Mood group while no restaurant has a mood tag', async ({ page }) => {
+test('offers the Mood group because the published board carries mood tags', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.row')).toHaveCount(174)
-  await expect(page.getByText('Mood', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Date night' })).toHaveCount(0)
+  await expect(page.getByText('Mood', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Date night' })).toHaveCount(1)
 })
 
 test('filtering by mood narrows the board when moods exist', async ({ page }) => {
@@ -105,11 +105,11 @@ test('the search placeholder is a query the site can answer', async ({ page }) =
   expect(await page.locator('.row').count()).toBeGreaterThan(0)
 })
 
-test('the map renders and says why it has no pins', async ({ page }) => {
+test('the map renders the published board without a no-pins note', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Map', exact: true }).click()
   await expect(page.locator('.map canvas')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText(/locations are not available yet/i)).toBeVisible()
+  await expect(page.getByText(/locations are not available yet/i)).toHaveCount(0)
 })
 
 test('the map drops the no-pins note once restaurants have coordinates', async ({ page }) => {
@@ -157,10 +157,26 @@ test('every filter group opens behind the phone disclosure at 320px', async ({ p
 
   await page.getByRole('button', { name: 'Filters and sorting' }).click()
   await expect(page.locator('.filters__group legend')).toHaveText([
-    'Meal', 'Price', 'Neighborhood', 'Cuisine', 'Dining', 'Dietary', 'Sort',
+    'Mood', 'Meal', 'Price', 'Neighborhood', 'Cuisine', 'Dining', 'Dietary', 'Sort',
   ])
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
   expect(overflow).toBe(false)
+})
+
+test('the view switch shows which view is selected before the map is ever opened', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.row').first()).toBeVisible()
+
+  // The switch is always on the page. Its styles must not arrive with the lazy map,
+  // or on first load both buttons look selected.
+  const paint = (name: string) =>
+    page.getByRole('button', { name, exact: true }).evaluate((el) => {
+      const s = getComputedStyle(el)
+      return `${s.backgroundColor}|${s.color}`
+    })
+
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(await paint('List')).not.toBe(await paint('Map'))
 })
 
 test('the page does not scroll sideways on a small phone', async ({ page }) => {

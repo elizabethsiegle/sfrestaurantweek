@@ -12,6 +12,7 @@ export interface FilterState {
   diningOptions: string[]
   moods: MoodTag[]
   maxPrice: number | null
+  priceTier: number | null
   vegetarianOnly: boolean
   shortlist: string[] | null
 }
@@ -23,6 +24,7 @@ export const EMPTY_FILTERS: FilterState = {
   diningOptions: [],
   moods: [],
   maxPrice: null,
+  priceTier: null,
   vegetarianOnly: false,
   shortlist: null,
 }
@@ -41,6 +43,9 @@ export function applyFilters(entries: Entry[], f: FilterState): Entry[] {
     const asked = f.meals.length ? e.offers.filter((o) => f.meals.includes(o.meal)) : e.offers
     if (f.meals.length && asked.length === 0) return false
     if (f.maxPrice !== null && !asked.some((o) => o.price <= f.maxPrice!)) return false
+    // A tier names one denomination, so a $90 board must not list a $45 menu. The
+    // offer that matches has to be one the meal filter already allowed.
+    if (f.priceTier !== null && !asked.some((o) => o.price === f.priceTier)) return false
     return true
   })
 }

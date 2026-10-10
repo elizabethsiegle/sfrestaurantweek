@@ -16,10 +16,21 @@ function closeDetail(): void {
   trigger = null
 }
 
-export async function openDetail(slug: string, name: string, opener?: HTMLElement | null): Promise<void> {
+// `hasMenu` is false for a restaurant that published no menu. The build writes no
+// file for those, so fetching one is pointless and a miss there is not a failure.
+export async function openDetail(
+  slug: string,
+  name: string,
+  opener?: HTMLElement | null,
+  hasMenu = true,
+): Promise<void> {
   trigger = opener ?? (document.activeElement as HTMLElement | null)
   openSlug.value = slug
   openName.value = name
+  if (!hasMenu) {
+    state.value = { kind: 'ready', courses: [] }
+    return
+  }
   const cached = cache.get(slug)
   if (cached) {
     state.value = { kind: 'ready', courses: cached }
@@ -29,6 +40,13 @@ export async function openDetail(slug: string, name: string, opener?: HTMLElemen
   let next: MenuState
   try {
     const response = await fetch(`/data/menus/${slug}.json`)
+    // A missing file means the menu was never published, which the card reports as
+    // such. Only a real transport or parse problem is worth offering a retry for.
+    if (response.status === 404) {
+      next = { kind: 'ready', courses: [] }
+      if (openSlug.value === slug) state.value = next
+      return
+    }
     if (!response.ok) throw new Error(`Menu request failed with status ${response.status}`)
     const body = (await response.json()) as { courses?: unknown }
     if (!Array.isArray(body.courses)) throw new Error('Menu file has no courses list')
@@ -66,6 +84,7 @@ export function DetailCard() {
       <button type="button" class="detail__close" onClick={closeDetail}>
         Close
       </button>
+      <h2 class="detail__name">{openName.value}</h2>
       {current.kind === 'loading' && <p role="status">Reading the menu</p>}
       {current.kind === 'failed' && <p>Could not load this menu. Close it and try again.</p>}
       {current.kind === 'ready' && current.courses.length === 0 && <p>Menu not available yet.</p>}

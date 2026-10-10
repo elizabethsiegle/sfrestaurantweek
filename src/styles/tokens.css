@@ -1,22 +1,39 @@
+/*
+ * A painted price board, not a newspaper. Colours are sampled from the things a
+ * Restaurant Week diner actually walks past: a bottle-green painted awning, the
+ * brass rail under it, and the oyster-grey card the menu is printed on.
+ *
+ * Brass is the only accent. It means money, and nothing else is allowed to use it.
+ */
 :root {
-  --paper: #fdfaf2;
-  --paper-shade: #f4efe4;
-  --ink: #171310;
-  --ink-soft: #5a5149;
-  --rule: #d8cfbd;
-  --letterpress-red: #b3202c;
+  --board: #10261f;
+  --board-raised: #16332a;
+  --board-ink: #ede7d6;
+  --board-ink-soft: #93a79a;
+  --board-rule: #2d4a3f;
 
-  --font-display: 'Playfair Display', 'Hoefler Text', Georgia, serif;
-  --font-text: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --card: #e9e7e0;
+  --card-raised: #f3f2ec;
+  --ink: #15211c;
+  --ink-soft: #5c6660;
+  --rule: #c7c8bf;
+
+  /* Two weights of the one accent: the dark for card stock, the light for the board. */
+  --brass: #8a5e0c;
+  --brass-light: #e3b23c;
+
+  --font-display: 'Instrument Serif', 'Hoefler Text', Georgia, serif;
+  --font-text: 'Archivo', -apple-system, 'Segoe UI', system-ui, sans-serif;
 
   --size-xs: 0.75rem;
   --size-s: 0.875rem;
   --size-m: 1rem;
-  --size-l: 1.5rem;
-  --size-xl: 2.5rem;
-  --size-display: 4rem;
+  --size-l: 1.375rem;
+  --size-xl: 2rem;
+  --size-display: 3.75rem;
 
-  --gutter: 1rem;
-  --row-pad: 0.6rem;
+  --gutter: 1.25rem;
+  --row-pad: 0.75rem;
   --card-pad: 2.25rem;
+  --rail: 20rem;
 }

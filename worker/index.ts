@@ -3,7 +3,9 @@ import type { Entry } from '../src/lib/entry.js'
 import {
   anthropicHeaders,
   buildCatalog,
+  MAX_RESPONSE_TOKENS,
   overDailyLimit,
+  SHORTLIST_SCHEMA,
   SHORTLIST_SYSTEM_PROMPT,
   validateQuery,
   validateShortlist,
@@ -59,12 +61,16 @@ async function shortlist(request: Request, env: Env): Promise<Response> {
       headers: anthropicHeaders(env.ANTHROPIC_API_KEY, env.ANTHROPIC_WORKSPACE_ID),
       body: JSON.stringify({
         model: 'claude-sonnet-5-5',
-        max_tokens: 1000,
+        max_tokens: MAX_RESPONSE_TOKENS,
         system: [
           { type: 'text', text: SHORTLIST_SYSTEM_PROMPT },
           { type: 'text', text: CATALOG, cache_control: { type: 'ephemeral' } },
         ],
         messages: [{ role: 'user', content: query as string }],
+        // Thinking is on by default on this model and its tokens count against
+        // max_tokens, which starved the answer. This model rejects `disabled`.
+        thinking: { type: 'between_tools' },
+        output_config: { format: { type: 'json_schema', schema: SHORTLIST_SCHEMA } },
       }),
     })
     if (!res.ok) {
@@ -72,8 +78,19 @@ async function shortlist(request: Request, env: Env): Promise<Response> {
       return json({ error: 'upstream_failed' }, 502)
     }
 
-    const body = (await res.json()) as { content: Array<{ type: string; text?: string }> }
+    const body = (await res.json()) as {
+      stop_reason: string
+      content: Array<{ type: string; text?: string }>
+    }
+    if (body.stop_reason === 'max_tokens') {
+      console.error('upstream response hit max_tokens')
+      return json({ error: 'upstream_failed' }, 502)
+    }
+
     const text = body.content.find((c) => c.type === 'text')?.text ?? ''
+    // Structured output returns bare JSON, so this only matters if the model
+    // ever wraps it in prose. Safe now that max_tokens is rejected above: a
+    // truncated body can no longer slice down to a valid-looking partial object.
     const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
     return json({ picks: validateShortlist(parsed, KNOWN) })
   } catch (err) {

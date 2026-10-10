@@ -1,11 +1,11 @@
 {
  "eventStart": "2026-10-16",
  "eventEnd": "2026-10-25",
- "builtAt": "2026-10-09T23:22:29.354Z",
+ "builtAt": "2026-10-10T00:56:27.452Z",
  "restaurants": 174,
- "withMenus": 0,
- "mapped": 0,
- "personal": 0,
+ "withMenus": 107,
+ "mapped": 124,
+ "personal": 15,
  "neighborhoods": 42,
  "cuisines": 34
 }

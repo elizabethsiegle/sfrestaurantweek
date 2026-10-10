@@ -5,7 +5,11 @@ export interface Place {
   lng: number
 }
 
-export class PlacesAuthError extends Error {}
+// Raised when every remaining row would fail the same way, so the run must stop
+// rather than spend the rest of the list proving it.
+export class PlacesFatalError extends Error {}
+export class PlacesAuthError extends PlacesFatalError {}
+export class PlacesQuotaError extends PlacesFatalError {}
 
 const ENDPOINT = 'https://places.googleapis.com/v1/places:searchText'
 const FIELD_MASK = 'places.id,places.formattedAddress,places.location'
@@ -32,6 +36,12 @@ export function redact(text: string, secret: string): string {
   return secret ? text.replaceAll(secret, '[redacted]') : text
 }
 
+// An expired or restricted key comes back as 400 INVALID_ARGUMENT, not 401/403.
+// Every row would fail the same way, so this is fatal rather than a per-row error.
+function isKeyRejection(body: string): boolean {
+  return /api[ _]?key/i.test(body)
+}
+
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
 
 export async function resolvePlace(
@@ -51,10 +61,14 @@ export async function resolvePlace(
   })
 
   if (!res.ok) {
-    const detail = redact(await res.text(), apiKey).slice(0, MAX_ERROR_BODY)
+    const body = await res.text()
+    const detail = redact(body, apiKey).slice(0, MAX_ERROR_BODY)
     const message = `places search failed: ${res.status} ${detail}`
-    if (res.status === 401 || res.status === 403) {
-      throw new PlacesAuthError(`${message}. The key looks wrong or lacks Places API access.`)
+    if (res.status === 401 || res.status === 403 || isKeyRejection(body)) {
+      throw new PlacesAuthError(`${message}. The key looks wrong, expired, or lacks Places API access.`)
+    }
+    if (res.status === 429) {
+      throw new PlacesQuotaError(`${message}. The Places quota is spent; run this again once it resets.`)
     }
     throw new Error(message)
   }

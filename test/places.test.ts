@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inBayArea, PlacesAuthError, resolvePlace } from '../scripts/lib/places.js'
+import { inBayArea, PlacesAuthError, PlacesFatalError, PlacesQuotaError, resolvePlace } from '../scripts/lib/places.js'
 
 function stubFetch(body: unknown) {
   return async () => new Response(JSON.stringify(body), { status: 200 })
@@ -35,6 +35,43 @@ describe('inBayArea', () => {
 })
 
 describe('resolvePlace', () => {
+  it('treats an expired key as fatal, not as one unresolved row', async () => {
+    const expired = async () =>
+      new Response(
+        JSON.stringify({
+          error: { code: 400, message: 'API key expired. Please renew the API key.', status: 'INVALID_ARGUMENT' },
+        }),
+        { status: 400 },
+      )
+
+    await expect(resolvePlace('54 Mint', 'Mid Market', expired, 'k')).rejects.toBeInstanceOf(
+      PlacesAuthError,
+    )
+  })
+
+  it('treats a spent quota as fatal, so the run stops instead of burning the list', async () => {
+    const exhausted = async () =>
+      new Response(
+        JSON.stringify({ error: { code: 429, message: "Quota exceeded for quota metric 'SearchTextRequest'" } }),
+        { status: 429 },
+      )
+
+    const failure = resolvePlace('54 Mint', 'Mid Market', exhausted, 'k')
+    await expect(failure).rejects.toBeInstanceOf(PlacesQuotaError)
+    await expect(failure).rejects.toBeInstanceOf(PlacesFatalError)
+  })
+
+  it('keeps an unrelated 400 as an ordinary per-row error', async () => {
+    const badRequest = async () =>
+      new Response(JSON.stringify({ error: { code: 400, message: 'textQuery is required' } }), {
+        status: 400,
+      })
+
+    const failure = resolvePlace('54 Mint', 'Mid Market', badRequest, 'k')
+    await expect(failure).rejects.toThrow('places search failed: 400')
+    await expect(failure).rejects.not.toBeInstanceOf(PlacesFatalError)
+  })
+
   it('keeps only place id, address and coordinates', async () => {
     const place = await resolvePlace('54 Mint', 'Mid Market', stubFetch({
       places: [{

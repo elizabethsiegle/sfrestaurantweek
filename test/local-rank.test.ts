@@ -124,7 +124,7 @@ describe('localRank on a plausible board', () => {
   })
 })
 
-describe("localRank on today's real index (moods and blurb empty)", () => {
+describe("localRank on today's real index", () => {
   const real = JSON.parse(readFileSync(new URL('../public/data/index.json', import.meta.url), 'utf8')) as Entry[]
   const bySlug = new Map(real.map((e) => [e.slug, e]))
   const pickEntries = (query: string) => localRank(real, query, 8).map((p) => bySlug.get(p.slug)!)
@@ -152,10 +152,11 @@ describe("localRank on today's real index (moods and blurb empty)", () => {
     expect(leaders.every((e) => e.cuisine === 'Italian' && e.neighborhood === 'Mission')).toBe(true)
   })
 
-  it('returns only steakhouses for steak', () => {
+  it('leads with steakhouses for steak, before menus that merely serve steak', () => {
     const picks = pickEntries('steak')
-    expect(picks.length).toBeGreaterThan(0)
-    expect(picks.every((e) => /steak/i.test(e.cuisine))).toBe(true)
+    const houses = picks.filter((e) => /steak/i.test(e.cuisine))
+    expect(houses.length).toBeGreaterThan(0)
+    expect(picks.slice(0, houses.length)).toEqual(houses)
   })
 
   it('returns only entries with outdoor dining for outdoor dining', () => {
@@ -174,8 +175,11 @@ describe("localRank on today's real index (moods and blurb empty)", () => {
     expect(localRank(real, 'italian under $20', 8)).toEqual([])
   })
 
-  it('returns nothing for the placeholder query while moods are empty', () => {
-    expect(localRank(real, 'somewhere warm for four people under $50', 8)).toEqual([])
+  it('answers the placeholder query with comfort food inside the budget', () => {
+    const picks = pickEntries('somewhere warm for four people under $50')
+    expect(picks.length).toBeGreaterThan(0)
+    expect(picks.every((e) => e.offers.some((o) => o.price <= 50))).toBe(true)
+    expect(picks.every((e) => e.moods.some((m) => m.tag === 'comfort-food'))).toBe(true)
   })
 
   it('still returns cheap entries for a bare budget', () => {

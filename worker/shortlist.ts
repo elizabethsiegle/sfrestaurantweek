@@ -64,6 +64,28 @@ Rules:
   matches the request. Do not restate the request.
 - When nothing fits well, return fewer picks rather than padding the list.`
 
+export const MAX_RESPONSE_TOKENS = 4000
+
+// Sent as output_config.format. Without it the model may wrap its answer in a
+// code fence or prose, and a truncated response parses as nothing at all.
+export const SHORTLIST_SCHEMA = {
+  type: 'object',
+  properties: {
+    picks: {
+      type: 'array',
+      maxItems: MAX_PICKS,
+      items: {
+        type: 'object',
+        properties: { slug: { type: 'string' }, reason: { type: 'string' } },
+        required: ['slug', 'reason'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['picks'],
+  additionalProperties: false,
+} as const
+
 export function validateQuery(query: unknown): 'bad_request' | 'query_too_long' | null {
   if (typeof query !== 'string' || !query.trim()) return 'bad_request'
   if (query.length > MAX_QUERY_LENGTH) return 'query_too_long'
