@@ -7,6 +7,7 @@ import { anthropicHeaders,
   MAX_PICKS,
   MAX_QUERY_LENGTH,
   overDailyLimit,
+  SHORTLIST_SCHEMA,
   validateQuery,
   MAX_REASON_LENGTH,
   validateShortlist,
@@ -52,6 +53,14 @@ describe('validateShortlist', () => {
     const manyKnown = new Set(slugs)
     const picks = slugs.map((slug) => ({ slug, reason: 'x' }))
     expect(validateShortlist({ picks }, manyKnown)).toHaveLength(MAX_PICKS)
+  })
+
+  it('does not rely on the schema to cap picks, because structured outputs rejects maxItems', () => {
+    expect(SHORTLIST_SCHEMA.properties.picks).not.toHaveProperty('maxItems')
+
+    const slugs = Array.from({ length: MAX_PICKS + 5 }, (_, i) => `slug-${i}`)
+    const overLongModelReply = { picks: slugs.map((slug) => ({ slug, reason: 'x' })) }
+    expect(validateShortlist(overLongModelReply, new Set(slugs))).toHaveLength(MAX_PICKS)
   })
 
   it('rejects prototype keys used as slugs', () => {

@@ -68,12 +68,16 @@ export const MAX_RESPONSE_TOKENS = 4000
 
 // Sent as output_config.format. Without it the model may wrap its answer in a
 // code fence or prose, and a truncated response parses as nothing at all.
+//
+// No maxItems on picks: structured outputs rejects it with
+// "For 'array' type, property 'maxItems' is not supported" and the whole
+// request 400s. The MAX_PICKS cap lives in the system prompt and is enforced
+// for real by validateShortlist.
 export const SHORTLIST_SCHEMA = {
   type: 'object',
   properties: {
     picks: {
       type: 'array',
-      maxItems: MAX_PICKS,
       items: {
         type: 'object',
         properties: { slug: { type: 'string' }, reason: { type: 'string' } },
